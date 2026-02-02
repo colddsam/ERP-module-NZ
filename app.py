@@ -19,14 +19,22 @@ app = FastAPI(
     version="1.0.0"
 )
 
-rag_engine = RagEngine(
-    dbPath=dbPath,
-    qdrant_api_key=qdrant_api_key,
-    collection_name=collection_name,
-    google_api_key=google_api_key,
-    embedding_model=embedding_model,
-    llm_model=llm_model
-)
+rag_engine: RagEngine | None = None
+
+
+@app.on_event("startup")
+def startup_event():
+    global rag_engine
+
+    rag_engine = RagEngine(
+        dbPath=os.getenv("QDRANT_ENDPOINT"),
+        qdrant_api_key=os.getenv("QDRANT_API_KEY"),
+        collection_name=os.getenv("COLLECTION_NAME"),
+        google_api_key=os.getenv("GOOGLE_API_KEY"),
+        embedding_model=os.getenv("EMBEDDING_MODEL"),
+        llm_model=os.getenv("LLM_MODEL"),
+    )
+
 
 @app.get("/health")
 def health_check():
