@@ -1,14 +1,32 @@
 from fastapi import FastAPI, HTTPException
 from utils.rag import RagEngine
 from schemas.schemas import QueryRequest, QueryResponse
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+dbPath=os.getenv("QDRANT_ENDPOINT")
+qdrant_api_key=os.getenv("QDRANT_API_KEY")
+collection_name=os.getenv("COLLECTION_NAME")
+google_api_key=os.getenv("GOOGLE_API_KEY")
+embedding_model=os.getenv("EMBEDDING_MODEL")
+llm_model=os.getenv("LLM_MODEL")
 
 app = FastAPI(
     title="RAG Customer Support API",
-    description="FastAPI wrapper for LangChain + Chroma RAG",
+    description="FastAPI wrapper for LangChain + Qdrant RAG",
     version="1.0.0"
 )
 
-rag_engine = RagEngine(dbPath="db/chroma")
+rag_engine = RagEngine(
+    dbPath=dbPath,
+    qdrant_api_key=qdrant_api_key,
+    collection_name=collection_name,
+    google_api_key=google_api_key,
+    embedding_model=embedding_model,
+    llm_model=llm_model
+)
 
 @app.get("/health")
 def health_check():

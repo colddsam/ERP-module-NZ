@@ -1,4 +1,6 @@
 from langchain_chroma import Chroma
+from qdrant_client import QdrantClient, models
+from langchain_qdrant import QdrantVectorStore
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_classic.chains import RetrievalQA
@@ -9,7 +11,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class RagEngine:
-    def __init__(self,dbPath:str="db/chroma"):
+    def __init__(self,qdrant_api_key:str="PLACE YOUR API KEY HERE",google_api_key:str="PLACE YOUR API KEY HERE",dbPath:str="./db/qdrant",embedding_model:str="sentence-transformers/all-MiniLM-L6-v2",collection_name:str="rag",llm_model:str="gemini-2.0-flash-exp"):
         self.PROMPT_TEMPLATE = """
             You are a customer support assistant for a business.
 
@@ -28,15 +30,21 @@ class RagEngine:
             Answer (with source):
             """
         self.embeddings = HuggingFaceEmbeddings(
-            model_name=os.getenv("EMBEDDING_MODEL")
+            model_name=embedding_model
             )
-        self.vectorstore = Chroma(
-            persist_directory=dbPath,
-            embedding_function=self.embeddings
+
+        self.client = QdrantClient(
+            url=dbPath,
+            api_key=qdrant_api_key
+            )
+        self.vectorstore = QdrantVectorStore(
+            client=self.client, 
+            collection_name=collection_name, 
+            embedding=self.embeddings
             )
         self.model = ChatGoogleGenerativeAI(
-            model=os.getenv("LLM_MODEL"),
-            google_api_key=os.getenv("GOOGLE_API_KEY"),
+            model=llm_model,
+            google_api_key=google_api_key,
             temperature=0.0,
             max_output_tokens=512,
             convert_system_message_to_human=True
@@ -47,7 +55,10 @@ class RagEngine:
         self.retrieval_qa = RetrievalQA.from_chain_type(
             llm=self.model,
             chain_type="stuff",
-            retriever=self.vectorstore.as_retriever(),
+            retriever=self.vectorstore.as_retriever(
+                search_type="similarity",
+                search_kwargs={"k": 3}
+            ),
             chain_type_kwargs={"prompt": self.prompt_template}
             )
     

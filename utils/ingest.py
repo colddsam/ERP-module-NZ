@@ -2,17 +2,24 @@ import os
 from langchain_community.document_loaders import PyPDFLoader,CSVLoader,TextLoader,DirectoryLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_community.vectorstores import Chroma
+from qdrant_client import QdrantClient
+from langchain_qdrant import QdrantVectorStore
+from qdrant_client.models import VectorParams, Distance
 from dotenv import load_dotenv
 
 load_dotenv()
 
 class Ingest:
-    def __init__(self,dataPath:str="./datasource",dbPath:str="./db/chroma"):
+    def __init__(self,dataPath:str="./datasource",dbPath:str=os.getenv("QDRANT_ENDPOINT"),collection_name:str="rag"):
         
         self.dataPath=dataPath
         self.dbPath=dbPath
         self.embedding_model=os.getenv("EMBEDDING_MODEL")
+        self.collection_name=collection_name
+        self.client=QdrantClient(
+            url=self.dbPath,
+            api_key=os.getenv("QDRANT_API_KEY")
+        )
 
     def __document_loader(self)->list:
 
@@ -87,11 +94,25 @@ class Ingest:
 
         embeddings=HuggingFaceEmbeddings(model_name=self.embedding_model)
 
-        Chroma.from_documents(
-            documents=chunks,
-            embedding=embeddings,
-            persist_directory=self.dbPath
+        collections = [c.name for c in self.client.get_collections().collections]
+
+        if self.collection_name not in collections:
+            self.client.create_collection(
+                collection_name=self.collection_name,
+                vectors_config=VectorParams(
+                    size=len(embeddings.embed_query("test")),
+                    distance=Distance.COSINE,
+            ),
         )
+
+        vectorstore = QdrantVectorStore(
+            client=self.client,
+            collection_name=self.collection_name,
+            embedding=embeddings,
+        )
+
+        vectorstore.add_documents(chunks)
+
 
 
     def ingest(self)->None:
@@ -102,7 +123,4 @@ class Ingest:
         print(f"Split {len(chunks)} chunks.")
         self.__embedding(chunks)
         print(f"Ingested {len(chunks)} chunks into {self.dbPath}.")
-
-if __name__=="__main__":
-    ingest=Ingest()
-    ingest.ingest()
+        self.client.close()
