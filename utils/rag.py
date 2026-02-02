@@ -1,5 +1,4 @@
-from langchain_chroma import Chroma
-from qdrant_client import QdrantClient, models
+from qdrant_client import QdrantClient
 from langchain_qdrant import QdrantVectorStore
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_google_genai import ChatGoogleGenerativeAI
