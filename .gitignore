@@ -5,4 +5,3 @@ db/
 .env
 test/
 test.py
-main.py

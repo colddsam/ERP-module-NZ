@@ -1,17 +1,16 @@
-
 # ERP-module-NZ — RAG Customer Support System
 
 A **Retrieval-Augmented Generation (RAG)** based customer support system built with:
 
 - **LangChain**
-- **Chroma Vector DB**
+- **Qdrant Vector DB**
 - **HuggingFace Embeddings**
 - **Google Gemini (LLM)**
 - **FastAPI**
 
 This project allows you to:
 1. Ingest documents (PDF, CSV, TXT)
-2. Store embeddings in Chroma DB
+2. Store embeddings in Qdrant Vector DB
 3. Ask natural-language questions via API
 4. Get answers strictly from your documents with sources
 
@@ -20,16 +19,14 @@ This project allows you to:
 ## 🧠 Architecture Overview
 
 ```
-
-Documents → Ingestion → Chunking → Embeddings → Chroma DB
+Documents → Ingestion → Chunking → Embeddings → Qdrant
 ↓
 Retrieval
 ↓
 Gemini LLM
 ↓
 FastAPI API
-
-````
+```
 
 ---
 
@@ -37,6 +34,7 @@ FastAPI API
 
 - Python **3.9+**
 - Google Gemini API key
+- Qdrant Cloud Cluster (or local instance)
 - Git
 
 ---
@@ -46,7 +44,7 @@ FastAPI API
 ```bash
 git clone https://github.com/colddsam/ERP-module-NZ.git
 cd ERP-module-NZ
-````
+```
 
 ---
 
@@ -82,8 +80,11 @@ Create a `.env` file in the project root:
 
 ```env
 EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
-LLM_MODEL=gemini-1.5-flash
+LLM_MODEL=gemini-2.0-flash-exp
 GOOGLE_API_KEY=your_google_api_key_here
+QDRANT_ENDPOINT=your_qdrant_cluster_url
+QDRANT_API_KEY=your_qdrant_api_key
+COLLECTION_NAME=rag
 ```
 
 ---
@@ -122,7 +123,7 @@ Each chunk contains:
 Run the ingestion script:
 
 ```bash
-python ingest.py
+python main.py
 ```
 
 ### What this does:
@@ -130,14 +131,15 @@ python ingest.py
 * Loads PDF / CSV / TXT files
 * Splits text into chunks
 * Creates embeddings using HuggingFace
-* Stores vectors in **Chroma DB**
+* Stores vectors in **Qdrant**
 
 Output example:
 
 ```
-Loaded 12 documents
-Split 240 chunks
-Ingested 240 chunks into db/chroma
+Ingesting documents from ./datasource...
+Loaded 12 documents.
+Split 240 chunks.
+Ingested 240 chunks into https://xxx.qdrant.tech.
 ```
 
 ---
@@ -146,7 +148,7 @@ Ingested 240 chunks into db/chroma
 
 The `RagEngine`:
 
-* Retrieves relevant chunks from Chroma
+* Retrieves relevant chunks from Qdrant
 * Uses **strict prompting**
 * Answers **only from documents**
 * Returns source-backed answers
@@ -162,7 +164,7 @@ If information is missing, it responds:
 ## 🚀 8. Start the FastAPI Server
 
 ```bash
-uvicorn main:app --reload
+uvicorn app:app --reload
 ```
 
 Server runs at:
@@ -219,15 +221,14 @@ POST /ask
 
 ```
 ERP-module-NZ/
-├── datasource/              # Input db
-├── db/
-│   └── chroma/              # Vector database
+├── datasource/              # Input documents
 ├── utils/
 │   ├── rag.py               # RAG engine
-│   └── ingest.py            # Document ingestion pipeline
+│   └── ingest.py            # Document ingestion logic
 ├── schemas/
 │   └── schemas.py           # Request / response models
 ├── app.py                   # FastAPI application
+├── main.py                  # Ingestion Entry point
 ├── requirements.txt         # Dependencies
 ├── .env                     # Environment variables
 └── README.md                # Project documentation
@@ -274,4 +275,3 @@ Licensed under **Apache 2.0**
 
 Pull requests are welcome.
 For major changes, please open an issue first.
-

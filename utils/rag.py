@@ -46,7 +46,6 @@ class RagEngine:
             model=llm_model,
             google_api_key=google_api_key,
             temperature=0.0,
-            max_output_tokens=512,
             convert_system_message_to_human=True
             )
         self.prompt_template = PromptTemplate.from_template(
