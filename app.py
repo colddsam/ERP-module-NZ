@@ -46,6 +46,9 @@ def startup_event():
         embedding_model=os.getenv("EMBEDDING_MODEL"),
     )
 
+@app.get("/")
+def root():
+    return {"message": "Welcome to the RAG Customer Support API"}
 
 @app.get("/health")
 def health_check():
