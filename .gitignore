@@ -5,3 +5,5 @@ db/
 .env
 test/
 test.py
+token.txt
+token.txt.pub

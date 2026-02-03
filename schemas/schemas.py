@@ -6,3 +6,7 @@ class QueryRequest(BaseModel):
 class QueryResponse(BaseModel):
     answer: str
 
+class IngestResponse(BaseModel):
+    status: str
+    message: str
+

@@ -10,15 +10,15 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Ingest:
-    def __init__(self,dataPath:str="./datasource",dbPath:str=os.getenv("QDRANT_ENDPOINT"),collection_name:str="rag"):
+    def __init__(self,dataPath:str="./datasource",dbPath:str="./db/qdrant",collection_name:str="rag",embedding_model:str="sentence-transformers/all-MiniLM-L6-v2",qdrant_api_key:str="PLACE YOUR API KEY HERE"):
         
         self.dataPath=dataPath
         self.dbPath=dbPath
-        self.embedding_model=os.getenv("EMBEDDING_MODEL")
+        self.embedding_model=embedding_model
         self.collection_name=collection_name
         self.client=QdrantClient(
             url=self.dbPath,
-            api_key=os.getenv("QDRANT_API_KEY")
+            api_key=qdrant_api_key
         )
 
     def __document_loader(self)->list:
