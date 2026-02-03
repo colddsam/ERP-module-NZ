@@ -1,3 +1,12 @@
+---
+title: FastAPI RAG Server
+emoji: 🚀
+colorFrom: blue
+colorTo: purple
+sdk: docker
+pinned: false
+---
+
 # ERP-module-NZ — RAG Customer Support System
 
 A **Retrieval-Augmented Generation (RAG)** based customer support system built with:
