@@ -20,11 +20,8 @@ app = FastAPI(
     version="1.0.0"
 )
 
-print("\n\napplication started and running 1st stage\n\n")
-
 rag_engine: RagEngine | None = None
 ingest: Ingest | None = None
-
 
 @app.on_event("startup")
 def startup_event():
@@ -53,7 +50,6 @@ def root():
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
-
 
 @app.post("/ask", response_model=QueryResponse)
 def ask_question(payload: QueryRequest):
