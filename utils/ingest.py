@@ -1,5 +1,7 @@
 import os
-from langchain_community.document_loaders import PyPDFLoader,CSVLoader,TextLoader,DirectoryLoader
+from langchain_community.document_loaders import (
+    PyPDFLoader, CSVLoader, TextLoader
+)
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from qdrant_client import QdrantClient
@@ -9,118 +11,117 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
 class Ingest:
-    def __init__(self,dataPath:str="./datasource",dbPath:str="./db/qdrant",collection_name:str="rag",embedding_model:str="sentence-transformers/all-MiniLM-L6-v2",qdrant_api_key:str="PLACE YOUR API KEY HERE"):
-        
-        self.dataPath=dataPath
-        self.dbPath=dbPath
-        self.embedding_model=embedding_model
-        self.collection_name=collection_name
-        self.client=QdrantClient(
-            url=self.dbPath,
-            api_key=qdrant_api_key
+    def __init__(
+        self,
+        client: QdrantClient,
+        dataPath: str = "./datasource",
+        collection_name: str = "rag",
+        embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2",
+    ):
+        self.client = client
+        self.dataPath = dataPath
+        self.collection_name = collection_name
+        self.embedding_model = embedding_model
+
+        self.embeddings = HuggingFaceEmbeddings(
+            model_name=self.embedding_model
         )
 
-    def __document_loader(self)->list:
-
+    def __document_loader(self) -> list:
         if not os.path.exists(self.dataPath):
-            print(f"Directory not found: '{self.dataPath}'")
+            print(f"Directory not found: {self.dataPath}")
             return []
 
-        documents=[]
+        documents = []
 
-        for root,_,files in os.walk(self.dataPath):
+        for root, _, files in os.walk(self.dataPath):
             for file in files:
-                filePath=os.path.join(root,file)
-                relativePath=os.path.relpath(filePath,self.dataPath)
-                pathParts=relativePath.split(os.sep)
+                file_path = os.path.join(root, file)
+                relative_path = os.path.relpath(file_path, self.dataPath)
+                path_parts = relative_path.split(os.sep)
 
-                category=pathParts[0] if len(pathParts)>0 else "general"
-                sub_category=pathParts[1] if len(pathParts)>1 else "general"
+                category = path_parts[0] if len(path_parts) > 0 else "general"
+                sub_category = path_parts[1] if len(path_parts) > 1 else "general"
 
-                loader=None
-
-                if(pathParts[-1].endswith(".pdf")):
-                    loader=PyPDFLoader(filePath)
-                elif(pathParts[-1].endswith(".csv")):
-                    loader=CSVLoader(filePath)
-                elif(pathParts[-1].endswith(".txt")):
-                    loader=TextLoader(filePath)
-
-                if loader is None:
-                    print(f"Unsupported file type: '{filePath}'")
+                if file.endswith(".pdf"):
+                    loader = PyPDFLoader(file_path)
+                elif file.endswith(".csv"):
+                    loader = CSVLoader(file_path)
+                elif file.endswith(".txt"):
+                    loader = TextLoader(file_path)
+                else:
                     continue
-                
-                docs=loader.load()
+
+                docs = loader.load()
                 for doc in docs:
-                    doc.metadata.update(
-                        {
-                        "source": filePath,
+                    doc.metadata.update({
+                        "source": file_path,
                         "doc_type": file.split(".")[-1],
                         "category": category,
                         "sub_category": sub_category,
-                        "document_name": file
-                        }
-                    )
+                        "document_name": file,
+                    })
                     documents.append(doc)
+
         return documents
 
-    def __chunking(self,documents:list=[])->list:
-        if(len(documents)==0):
-            print("No documents to ingest")
-            return
+    def __chunking(self, documents: list) -> list:
+        if not documents:
+            return []
 
-        text_splitter=RecursiveCharacterTextSplitter(
+        splitter = RecursiveCharacterTextSplitter(
             chunk_size=500,
             chunk_overlap=100,
-            separators=["\n\n","\n"," ",""]
         )
-        chunks=text_splitter.split_documents(documents)
 
-        for i,chunk in enumerate(chunks):
-            chunk.metadata.update(
-                {
-                    "chunk_id": i,
-                    "token_count": len(chunk.page_content.split())
-                }
-            )
+        chunks = splitter.split_documents(documents)
+
+        for i, chunk in enumerate(chunks):
+            chunk.metadata["chunk_id"] = i
 
         return chunks
 
-    def __embedding(self,chunks:list=[])->None:
-        if(len(chunks)==0):
+    def __embedding(self, chunks: list) -> None:
+        if not chunks:
             print("No chunks to ingest")
             return
 
-        embeddings=HuggingFaceEmbeddings(model_name=self.embedding_model)
+        existing = [c.name for c in self.client.get_collections().collections]
 
-        collections = [c.name for c in self.client.get_collections().collections]
-
-        if self.collection_name not in collections:
+        if self.collection_name not in existing:
+            vector_size = len(self.embeddings.embed_query("dimension-check"))
             self.client.create_collection(
                 collection_name=self.collection_name,
                 vectors_config=VectorParams(
-                    size=len(embeddings.embed_query("test")),
+                    size=vector_size,
                     distance=Distance.COSINE,
-            ),
-        )
+                ),
+            )
 
         vectorstore = QdrantVectorStore(
             client=self.client,
             collection_name=self.collection_name,
-            embedding=embeddings,
+            embedding=self.embeddings,
         )
 
-        vectorstore.add_documents(chunks)
+        BATCH_SIZE = 64
 
+        for i in range(0, len(chunks), BATCH_SIZE):
+            batch = chunks[i:i + BATCH_SIZE]
+            vectorstore.add_documents(batch)
+            print(f"Ingested batch {i // BATCH_SIZE + 1}")
 
+    def ingest(self) -> None:
+        print(f"Ingesting documents from {self.dataPath}")
 
-    def ingest(self)->None:
-        print(f"Ingesting documents from {self.dataPath}...")
-        docs=self.__document_loader()
-        print(f"Loaded {len(docs)} documents.")
-        chunks=self.__chunking(docs)
-        print(f"Split {len(chunks)} chunks.")
+        docs = self.__document_loader()
+        print(f"Loaded {len(docs)} documents")
+
+        chunks = self.__chunking(docs)
+        print(f"Created {len(chunks)} chunks")
+
         self.__embedding(chunks)
-        print(f"Ingested {len(chunks)} chunks into {self.dbPath}.")
-        self.client.close()
+
+        print("Ingestion completed successfully")

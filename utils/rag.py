@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class RagEngine:
-    def __init__(self,qdrant_api_key:str="PLACE YOUR API KEY HERE",google_api_key:str="PLACE YOUR API KEY HERE",dbPath:str="./db/qdrant",embedding_model:str="sentence-transformers/all-MiniLM-L6-v2",collection_name:str="rag",llm_model:str="gemini-2.0-flash-exp"):
+    def __init__(self,client:QdrantClient,google_api_key:str="[GCP_API_KEY]",embedding_model:str="sentence-transformers/all-MiniLM-L6-v2",collection_name:str="rag",llm_model:str="gemini-2.0-flash-exp"):
         self.PROMPT_TEMPLATE = """
             You are a customer support assistant for a business.
 
@@ -31,11 +31,7 @@ class RagEngine:
         self.embeddings = HuggingFaceEmbeddings(
             model_name=embedding_model
             )
-
-        self.client = QdrantClient(
-            url=dbPath,
-            api_key=qdrant_api_key
-            )
+        self.client = client
         self.vectorstore = QdrantVectorStore(
             client=self.client, 
             collection_name=collection_name, 
