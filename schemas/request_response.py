@@ -10,3 +10,7 @@ class IngestResponse(BaseModel):
     status: str
     message: str
 
+class ReceiptParseResponse(BaseModel):
+    status: str
+    data: dict
+    receipt_id: int

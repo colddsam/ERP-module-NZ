@@ -4,10 +4,11 @@ from langchain_community.document_loaders import (
 )
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
-from qdrant_client import QdrantClient
 from langchain_qdrant import QdrantVectorStore
 from qdrant_client.models import VectorParams, Distance
 from dotenv import load_dotenv
+from config.ingest import *
+from config.qdrant import get_qdrant_vectorstore
 
 load_dotenv()
 
@@ -15,19 +16,9 @@ load_dotenv()
 class Ingest:
     def __init__(
         self,
-        client: QdrantClient,
-        dataPath: str = "./datasource",
-        collection_name: str = "rag",
-        embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2",
     ):
-        self.client = client
-        self.dataPath = dataPath
-        self.collection_name = collection_name
-        self.embedding_model = embedding_model
-
-        self.embeddings = HuggingFaceEmbeddings(
-            model_name=self.embedding_model
-        )
+        self.dataPath = DATA_PATH
+        self.vectorstore = get_qdrant_vectorstore()
 
     def __document_loader(self) -> list:
         if not os.path.exists(self.dataPath):
@@ -88,29 +79,11 @@ class Ingest:
             print("No chunks to ingest")
             return
 
-        existing = [c.name for c in self.client.get_collections().collections]
-
-        if self.collection_name not in existing:
-            vector_size = len(self.embeddings.embed_query("dimension-check"))
-            self.client.create_collection(
-                collection_name=self.collection_name,
-                vectors_config=VectorParams(
-                    size=vector_size,
-                    distance=Distance.COSINE,
-                ),
-            )
-
-        vectorstore = QdrantVectorStore(
-            client=self.client,
-            collection_name=self.collection_name,
-            embedding=self.embeddings,
-        )
-
         BATCH_SIZE = 64
 
         for i in range(0, len(chunks), BATCH_SIZE):
             batch = chunks[i:i + BATCH_SIZE]
-            vectorstore.add_documents(batch)
+            self.vectorstore.add_documents(batch)
             print(f"Ingested batch {i // BATCH_SIZE + 1}")
 
     def ingest(self) -> None:

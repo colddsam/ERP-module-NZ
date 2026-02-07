@@ -11,3 +11,10 @@ langchain
 langchain_classic
 sentence-transformers
 pypdf
+pillow
+pytesseract
+pdf2image
+sqlalchemy
+pydantic
+python-multipart
+google-genai
