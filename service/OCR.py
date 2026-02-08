@@ -4,6 +4,7 @@ from pdf2image import convert_from_bytes
 from PIL import Image
 import cv2
 import numpy as np
+from config.OCR import POPPLER_PATH
 
 
 class OCRService:
@@ -23,9 +24,9 @@ class OCRService:
             Image.fromarray(processed),
             config="--psm 6"
         )
-
+    
     def extract_text_from_pdf_bytes(self, pdf_bytes: bytes) -> str:
-        pages = convert_from_bytes(pdf_bytes)
+        pages = convert_from_bytes(pdf_bytes, poppler_path=POPPLER_PATH)
         text = ""
         for page in pages:
             text += self.extract_text_from_image(page)

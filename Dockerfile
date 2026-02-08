@@ -1,6 +1,4 @@
-FROM python:3.13-slim
-
-ARG CACHE_BUST=1
+FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
@@ -14,6 +12,10 @@ RUN apt-get update && apt-get install -y \
     libtesseract-dev \
     libleptonica-dev \
     poppler-utils \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender1 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
