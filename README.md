@@ -18,9 +18,13 @@ app_port: 7860
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](https://www.docker.com/)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
-<a href="https://huggingface.co/spaces/new?sdk=docker&template=colddsam/ERP-module-NZ">
-  <img src="https://huggingface.co/datasets/huggingface/badges/raw/main/deploy-on-spaces-sm.svg" alt="Deploy on Spaces"/>
+<a href="https://huggingface.co/spaces/new?template=colddsam/SMB-Ops-Suite&sdk=docker">
+  <img
+    src="https://huggingface.co/datasets/huggingface/badges/raw/main/deploy-on-spaces-sm.svg"
+    alt="Deploy on Hugging Face Spaces"
+  />
 </a>
+
 
 </div>
 
