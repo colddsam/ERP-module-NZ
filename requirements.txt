@@ -18,3 +18,4 @@ sqlalchemy
 pydantic
 python-multipart
 google-genai
+numpy

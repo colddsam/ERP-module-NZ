@@ -1,6 +1,7 @@
 import io
-from fastapi import FastAPI, HTTPException,UploadFile, File
+from fastapi import FastAPI, HTTPException,UploadFile, File,Form,BackgroundTasks
 from fastapi.responses import JSONResponse
+from typing import List
 from PIL import Image
 from service.rag import RagEngine
 from service.ingest import Ingest
@@ -61,25 +62,51 @@ def health_check():
 
 
 @app.post("/ask", response_model=QueryResponse)
-def ask_question(payload: QueryRequest):
+async def ask_question(payload: QueryRequest):
     if not rag_engine:
         raise HTTPException(status_code=503, detail="RAG engine not initialized")
 
     try:
-        answer = rag_engine.get_answer(payload.query)
-        return QueryResponse(answer=answer)
+        result = await rag_engine.get_answer(
+            company_name=payload.company_name,
+            question=payload.query,
+        )
+
+        return QueryResponse(**result)
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/ingest", response_model=IngestResponse)
-def ingest_data():
+
+
+@app.post("/ingest/company", response_model=IngestResponse)
+async def ingest_company_documents(
+    company_name: str = Form(...),
+    files: list[UploadFile] = File(...)
+):
     if not ingest_engine:
         raise HTTPException(status_code=503, detail="Ingest engine not initialized")
 
     try:
-        ingest_engine.ingest()
-        return IngestResponse(status="ok", message="Data ingested successfully")
+        files_data = [
+            {
+                "filename": f.filename,
+                "content": await f.read()
+            }
+            for f in files
+        ]
+
+        num_chunks = ingest_engine.ingest_company_data(
+            company_name,
+            files_data,
+        )
+
+        return IngestResponse(
+            status="success",
+            message=f"Ingestion complete for company '{company_name}'. Processed {num_chunks} chunks."
+        )
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
