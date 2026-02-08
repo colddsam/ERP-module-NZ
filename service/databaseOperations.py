@@ -9,12 +9,17 @@ class DatabaseOperations:
         self.db = SessionLocal()
 
     def save_receipt(self, data: dict)->int:
+        try:
+            receipt_date = datetime.strptime(data.get("receipt_date", ""), "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            receipt_date = None
+
         receipt = Receipt(
-            merchant_name=data["merchant_name"],
-            receipt_date=datetime.strptime(data["receipt_date"], "%Y-%m-%d").date(),
-            total_amount=data["total_amount"],
-            tax_amount=data["tax_amount"],
-            currency=data["currency"]
+            merchant_name=data.get("merchant_name"),
+            receipt_date=receipt_date,
+            total_amount=data.get("total_amount"),
+            tax_amount=data.get("tax_amount"),
+            currency=data.get("currency")
         )
         self.db.add(receipt)
         self.db.commit()

@@ -22,5 +22,4 @@ class IngestResponse(BaseModel):
 
 class ReceiptParseResponse(BaseModel):
     status: str
-    data: dict
-    receipt_id: int
+    data: List[dict]

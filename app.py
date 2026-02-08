@@ -110,39 +110,57 @@ async def ingest_company_documents(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/receipt/parse",response_model=ReceiptParseResponse)
-async def parse_receipt(file: UploadFile = File(...)):
-    if not database_operations:
-        raise HTTPException(status_code=503, detail="Database operations not initialized")
+@app.post("/receipt/parse", response_model=ReceiptParseResponse)
+async def parse_receipt(files: List[UploadFile] = File(...)):
+    if not all([ocr_service, raw_text2json, database_operations]):
+        raise HTTPException(status_code=503, detail="Services not initialized")
+
+    parsed_results = []
 
     try:
-        if not file.content_type.startswith("image/"):
-            raise HTTPException(status_code=400, detail="Invalid file type")
+        for file in files:
+            content = await file.read()
 
-        content = await file.read()
-        image = Image.open(io.BytesIO(content)).convert("RGB")
+            try:
+                ocr_text = ocr_service.extract_text(
+                    file_bytes=content,
+                    content_type=file.content_type
+                )
+            except ValueError:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Unsupported file type: {file.filename}"
+                )
 
-        ocr_text = ocr_service.extract_text_from_image(image)
+            if not ocr_text.strip():
+                continue
 
-        if not ocr_text.strip():
-            raise HTTPException(status_code=422, detail="No text detected")
+            parsed_receipt = raw_text2json.parse_receipt(ocr_text)
 
-        parsed_receipt = raw_text2json.parse_receipt(ocr_text)
+            if not parsed_receipt:
+                continue
 
-        if not parsed_receipt:
-            raise HTTPException(status_code=422, detail="Failed to parse receipt")
+            receipt_id = database_operations.save_receipt(parsed_receipt)
 
-        receipt_data = database_operations.save_receipt(parsed_receipt)
+            parsed_results.append({
+                "filename": file.filename,
+                "receipt_id": receipt_id,
+                "data": parsed_receipt
+            })
+
+        if not parsed_results:
+            raise HTTPException(
+                status_code=422,
+                detail="No valid receipts found in uploaded files"
+            )
 
         return ReceiptParseResponse(
             status="success",
-            data=parsed_receipt,
-            receipt_id=receipt_data
+            data=parsed_results
         )
 
     except HTTPException:
         raise
-
     except Exception as e:
         raise HTTPException(
             status_code=500,
