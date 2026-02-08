@@ -1,222 +1,157 @@
 ---
-title: FastAPI RAG Server
+title: FastAPI RAG & Receipt Parser
 emoji: 🚀
 colorFrom: blue
 colorTo: purple
 sdk: docker
 pinned: false
+app_port: 7860
 ---
 
-# 🤖 RAG Customer Support System (FastAPI + LangChain + Qdrant)
+# 🤖 Enterprise RAG & Intelligent Receipt Parser
 
-A powerful **Retrieval-Augmented Generation (RAG)** system designed for automated customer support. It ingests documents, stores them as vector embeddings, and uses a Large Language Model (LLM) to answer user queries with high accuracy and source attribution.
+<div align="center">
 
+[![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-009688.svg)](https://fastapi.tiangolo.com)
+[![LangChain](https://img.shields.io/badge/LangChain-v0.1-green.svg)](https://python.langchain.com/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](https://www.docker.com/)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
+<a href="https://huggingface.co/spaces/new?sdk=docker&template=colddsam/ERP-module-NZ">
+  <img src="https://huggingface.co/datasets/huggingface/badges/raw/main/deploy-on-spaces-sm.svg" alt="Deploy on Spaces"/>
+</a>
 
-## ✨ Features
-
-- **Document Ingestion**: Supports PDF, CSV, and TXT files with automatic metadata extraction.
-- **Smart Chunking**: Uses `RecursiveCharacterTextSplitter` for optimal context preservation.
-- **Vector Search**: Fast and scalable retrieval using **Qdrant**.
-- **Generative AI**: Integrated with **Google Gemini (LLM)** for natural language responses.
-- **Strict Context**: Answers are grounded strictly in the provided documents to prevent hallucinations.
-- **FastAPI Backend**: Robust and efficient API for integration.
+</div>
 
 ---
 
-## 🧠 Architecture Flow
+A high-performance **Retrieval-Augmented Generation (RAG)** system and **Intelligent Receipt Parser** built with FastAPI. It leverages **Qdrant** for vector search and **Google Gemini 2.5 Flash** for generative AI and data extraction.
 
+## ✨ Key Features
+
+| Feature | Description |
+| :--- | :--- |
+| **🔍 RAG Knowledge Base** | Ingest PDF/Text documents and query them using semantic search (Qdrant) + LLM (Gemini). Support for *Contextual Answers* and *Source Attribution*. |
+| **🧾 Intelligent Receipt Parser** | Extract structured data (Merchant, Date, Items, Tax) from receipt images (JPG/PNG) and PDFs using **OCR** (Tesseract/Poppler) + **AI**. |
+| **⚡ High Performance** | Asynchronous API (non-blocking I/O) and global embedding model caching for low latency. |
+| **🐳 Docker Ready** | Fully containerized for easy deployment to **Hugging Face Spaces** or any cloud provider. |
+
+---
+
+## 🧠 Architecture
+
+### 1. RAG Query Flow
 ```mermaid
-graph TD
-    subgraph Ingestion_Pipeline
-        A[Documents PDF CSV TXT] -->|Load| B[Document Loader]
-        B -->|Split| C[Text Splitter]
-        C -->|Embed| D[HuggingFace Embeddings]
-        D -->|Store| E[Qdrant Vector DB]
-    end
+graph LR
+    User[User Query] -->|POST /ask| API[FastAPI]
+    API -->|Embed| Embed[HuggingFace Model]
+    Embed -->|Search| Qdrant[Qdrant Vector DB]
+    Qdrant -->|Retrieve Context| API
+    API -->|Context + Query| LLM[Google Gemini 2.5]
+    LLM -->|Answer| User
+```
 
-    subgraph Query_Pipeline
-        F[User Query] -->|Embed| G[Query Embedding]
-        G -->|Search| E
-        E -->|Retrieve Top K Contexts| H[Relevant Chunks]
-        H -->|Context and Query| I[Prompt Template]
-        I -->|Generate| J[Gemini LLM]
-        J -->|Response| K[Final Answer]
-    end
-
-
+### 2. Receipt Parsing Flow
+```mermaid
+graph LR
+    User[Upload File] -->|POST /receipt/parse| API[FastAPI]
+    API -->|Convert| PDF/Img[Image Processor]
+    PDF/Img -->|OCR| Tesseract[Tesseract OCR]
+    Tesseract -->|Raw Text| LLM[Google Gemini 2.5]
+    LLM -->|JSON Data| API
+    API -->|Save| DB[(SQLite Database)]
+    DB -->|Receipt ID| API
+    API -->|Structured Response| User
 ```
 
 ---
 
 ## 🛠 Tech Stack
 
-* **Framework**: [FastAPI](https://fastapi.tiangolo.com/)
-* **LLM Orchestration**: [LangChain](https://www.langchain.com/)
-* **Vector Database**: [Qdrant](https://qdrant.tech/)
-* **LLM**: [Google Gemini](https://ai.google.dev/)
-* **Embeddings**: [HuggingFace](https://huggingface.co/) (`sentence-transformers/all-MiniLM-L6-v2`)
+| Component | Technology | Description |
+| :--- | :--- | :--- |
+| **Framework** | FastAPI | High-performance async Python web framework. |
+| **Language** | Python 3.11+ | Modern Python features. |
+| **LLM** | Google Gemini 2.5 Flash | Cost-effective, high-speed generative model. |
+| **Vector DB** | Qdrant | Scalable vector search engine. |
+| **OCR** | Tesseract 5, Poppler | Robust optical character recognition. |
+| **Database** | SQLite / PostgreSQL | Relational storage for parsed receipts. |
 
 ---
 
-## 📦 Prerequisites
+## 🚀 Quick Start (Local)
 
-Before running the project, ensure you have:
+### Prerequisites
+- **Python 3.11+**
+- **Tesseract OCR** ([Windows](https://github.com/UB-Mannheim/tesseract/wiki) | Linux `sudo apt install tesseract-ocr`)
+- **Poppler** ([Windows](https://github.com/oschwartz10612/poppler-windows/releases/) | Linux `sudo apt install poppler-utils`)
 
-1. **Python 3.9+** installed.
-2. **Qdrant Instance**:
-* [Qdrant Cloud](https://cloud.qdrant.io/) (Free Tier available) OR
-* Local Qdrant Docker instance.
+### Installation
 
+1.  **Clone & Setup**
+    ```bash
+    git clone https://github.com/colddsam/ERP-module-NZ.git
+    cd ERP-module-NZ
+    python -m venv .venv
+    source .venv/bin/activate  # Windows: .\.venv\Scripts\activate
+    pip install -r requirements.txt
+    ```
 
-3. **Google AI Studio API Key**: Get it [here](https://aistudio.google.com/).
+2.  **Configure Environment**
+    Create a `.env` file:
+    ```env
+    GOOGLE_API_KEY=your_key
+    QDRANT_URL=your_qdrant_url
+    QDRANT_API_KEY=your_qdrant_key
+    EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+    LLM_MODEL=gemini-2.5-flash
+    COLLECTION_NAME=rag_collection
+    # Windows Paths (Update these!)
+    TESSERACT_PATH=C:\Program Files\Tesseract-OCR\tesseract.exe
+    POPPLER_PATH=C:\path\to\poppler\bin
+    ```
+
+3.  **Run Application**
+    ```bash
+    uvicorn app:app --reload
+    ```
+    Open **[http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)** to test the API.
 
 ---
 
-## 🚀 Installation & Setup
+## 🤗 Deploy to Hugging Face Spaces
 
-### 1. Clone the Repository
+This repository is optimized for **Hugging Face Spaces (Docker SDK)**.
 
+### 1-Click Deployment
+1.  **Create a New Space**: Select **Docker** as the SDK.
+2.  **Files**: Upload this entire repository.
+3.  **Secrets**: Go to **Settings** > **Variables and secrets** and add:
+    - `GOOGLE_API_KEY`
+    - `QDRANT_URL`
+    - `QDRANT_API_KEY`
+    - `QDRANT_API_KEY`
+4.  **Done!** The Space will build and launch automatically.
+
+*Note: The `Dockerfile` handles all system dependencies (Tesseract, Poppler, GLib) required for OCR.*
+
+---
+
+## 🔌 API Reference
+
+| Method | Endpoint | Use Case | Body |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/` | Health Check | - |
+| `POST` | `/ingest/company` | Upload Documents to RAG | Multipart (Files) |
+| `POST` | `/ask` | Query Knowledge Base | JSON `{"query": "..."}` |
+| `POST` | `/receipt/parse` | Extract Data from Receipt | Multipart (Image/PDF) |
+
+### Example: Parse a Receipt
 ```bash
-git clone [https://github.com/colddsam/ERP-module-NZ.git](https://github.com/colddsam/ERP-module-NZ.git)
-cd ERP-module-NZ
-
+curl -X 'POST' \
+  'http://localhost:8000/receipt/parse' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: multipart/form-data' \
+  -F 'files=@receipt.jpg;type=image/jpeg'
 ```
-
-### 2. Create a Virtual Environment
-
-**Windows:**
-
-```powershell
-python -m venv venv
-.\venv\Scripts\activate
-
-```
-
-**macOS / Linux:**
-
-```bash
-python3 -m venv venv
-source venv/bin/activate
-
-```
-
-### 3. Install Dependencies
-
-```bash
-pip install -r requirements.txt
-
-```
-
-### 4. Configure Environment Variables
-
-Create a `.env` file in the root directory and add your credentials:
-
-```env
-# Models
-EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
-LLM_MODEL=gemini-2.0-flash-exp
-
-# API Keys & Endpoints
-GOOGLE_API_KEY=your_google_api_key_here
-QDRANT_ENDPOINT=your_qdrant_url (e.g., [https://xyz.qdrant.tech](https://xyz.qdrant.tech))
-QDRANT_API_KEY=your_qdrant_api_key
-COLLECTION_NAME=rag
-
-```
-
----
-
-## 📖 Usage Guide
-
-### Phase 1: Ingesting Data 📂
-
-Place your documents inside the `datasource/` directory. You can organize them into subfolders (e.g., `hr/`, `finance/`) which will be captured as metadata.
-
-**Supported formats:** `.pdf`, `.csv`, `.txt`
-
-Run the ingestion script:
-
-```bash
-python main.py
-
-```
-
-*This script will load documents, chunk them, generate embeddings, and upload them to your Qdrant collection.*
-
-### Phase 2: Starting the API Server ⚡
-
-Launch the FastAPI server using Uvicorn:
-
-```bash
-uvicorn app:app --reload
-
-```
-
-The server will start at `http://127.0.0.1:8000`.
-
----
-
-## 🔌 API Endpoints
-
-You can interact with the API via the [Swagger UI](http://127.0.0.1:8000/docs).
-
-### 1. Health Check
-
-* **GET** `/health`
-* Checks if the server is running.
-* **Response**: `{"status": "ok"}`
-
-### 2. Ask a Question
-
-* **POST** `/ask`
-* **Body**:
-```json
-{
-  "query": "What is the policy on remote work?"
-}
-
-```
-
-
-* **Response**:
-```json
-{
-  "answer": "Remote work is allowed up to 2 days a week... (Source: hr/policies.pdf)"
-}
-
-```
-
-
-
-### 3. Trigger Ingestion (via API)
-
-* **POST** `/ingest`
-* Triggers the ingestion process for files currently in `datasource/`.
-
----
-
-## 📂 Project Structure
-
-```plaintext
-ERP-module-NZ/
-├── app.py                 # FastAPI application entry point
-├── main.py                # Standalone script for data ingestion
-├── requirements.txt       # Project dependencies
-├── .env                   # Environment variables (not committed)
-├── README.md              # Project documentation
-├── datasource/            # Directory for input documents
-│   └── ...
-├── schemas/
-│   └── schemas.py         # Pydantic models for API requests/responses
-└── utils/
-    ├── ingest.py          # Logic for loading, splitting, and embedding docs
-    └── rag.py             # RAG engine (Retrieval + Generation logic)
-
-```
-
----
-
-## 📜 License
-
-Licensed under Apache 2.0.
