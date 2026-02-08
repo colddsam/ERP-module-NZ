@@ -19,3 +19,8 @@ pydantic
 python-multipart
 google-genai
 numpy
+pymupdf
+pdf2image
+opencv-python-headless
+camelot-py
+pandas

@@ -8,3 +8,4 @@ test.py
 token.txt
 token.txt.pub
 *.db
+GCP_COST_ESTIMATE.md
